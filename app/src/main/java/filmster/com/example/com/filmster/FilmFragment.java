@@ -1,6 +1,7 @@
 package filmster.com.example.com.filmster;
 
 import android.content.Context;
+import android.content.Intent;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
@@ -14,7 +15,6 @@ import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.GridView;
 import android.widget.ImageView;
-import android.widget.Toast;
 
 import com.squareup.picasso.Picasso;
 
@@ -62,9 +62,19 @@ public class FilmFragment extends Fragment {
         theGrid.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
             public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-                //Film f = (Film) mImages.getItem(position);
-                Toast.makeText(view.getContext(), "Launching..." + position, Toast.LENGTH_SHORT).show();
+                Film f = (Film) filmAdapter.getItem(position);
+                //Toast.makeText(view.getContext(), "Launching..." + position, Toast.LENGTH_SHORT).show();
                 //Launch the detail activity
+                Intent detailIntent = new Intent(view.getContext(),DetailActivity.class);
+                //Send the array position of the film we want to see details on
+                detailIntent.putExtra(getString(R.string.detail_title),f.title);
+                detailIntent.putExtra(getString(R.string.detail_synopsis), f.synopsis);
+                detailIntent.putExtra(getString(R.string.detail_release), f.release_date);
+                detailIntent.putExtra(getString(R.string.detail_poster),f.poster_path);
+                detailIntent.putExtra(getString(R.string.detail_id),f.id);
+                detailIntent.putExtra(getString(R.string.detail_rating),f.vote_avg);
+                //Launch detail activity
+                startActivity(detailIntent);
             }
         });
         Log.i("MAIN:onCreate", "Finished onCreate Layout setup");
