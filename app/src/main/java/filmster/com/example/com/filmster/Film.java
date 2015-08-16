@@ -3,7 +3,7 @@ package filmster.com.example.com.filmster;
 /**
  * Created by tgreen on 8/11/15.
  */
-public class Film {
+public class Film  {
     //A simple container to hold instances of different movie object data
     //in our app
 

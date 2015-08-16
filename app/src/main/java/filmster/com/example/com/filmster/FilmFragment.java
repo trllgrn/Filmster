@@ -2,13 +2,18 @@ package filmster.com.example.com.filmster;
 
 import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
+import android.preference.PreferenceManager;
 import android.support.annotation.Nullable;
 import android.support.v4.app.Fragment;
 import android.util.Log;
 import android.view.LayoutInflater;
+import android.view.Menu;
+import android.view.MenuInflater;
+import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.AdapterView;
@@ -30,6 +35,8 @@ import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 
 /**
  * Created by tgreen on 8/13/15.
@@ -43,6 +50,34 @@ public class FilmFragment extends Fragment {
 
     }
 
+    public class voteCompare implements Comparator<Film> {
+        @Override
+        public int compare(Film lhs, Film rhs) {
+            return lhs.vote_avg.compareTo(rhs.vote_avg);
+        }
+    }
+
+    private void updateMovies() {
+        FetchPostersTask fetchPosters = new FetchPostersTask();
+        fetchPosters.execute();
+    }
+
+    @Override
+    public void onCreate(@Nullable Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setHasOptionsMenu(true);
+    }
+
+    @Override
+    public void onCreateOptionsMenu(Menu menu, MenuInflater inflater) {
+        super.onCreateOptionsMenu(menu, inflater);
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        return super.onOptionsItemSelected(item);
+    }
+
     @Nullable
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
@@ -53,7 +88,7 @@ public class FilmFragment extends Fragment {
 
         //mImages = new ImageAdapter(rootView.getContext());
 
-        filmAdapter = new FilmAdapter(rootView.getContext(),R.id.grid_element,new ArrayList<Film>());
+        filmAdapter = new FilmAdapter(rootView.getContext(),R.id.grid_element, new ArrayList<Film>());
 
         theGrid.setAdapter(filmAdapter);
         Log.i("MAIN:onCreate", "Adapter bound to Grid with " + filmAdapter.getCount() + "elements");
@@ -65,22 +100,23 @@ public class FilmFragment extends Fragment {
                 Film f = (Film) filmAdapter.getItem(position);
                 //Toast.makeText(view.getContext(), "Launching..." + position, Toast.LENGTH_SHORT).show();
                 //Launch the detail activity
-                Intent detailIntent = new Intent(view.getContext(),DetailActivity.class);
+                Intent detailIntent = new Intent(view.getContext(), DetailActivity.class);
                 //Send the array position of the film we want to see details on
-                detailIntent.putExtra(getString(R.string.detail_title),f.title);
+                detailIntent.putExtra(getString(R.string.detail_title), f.title);
                 detailIntent.putExtra(getString(R.string.detail_synopsis), f.synopsis);
                 detailIntent.putExtra(getString(R.string.detail_release), f.release_date);
-                detailIntent.putExtra(getString(R.string.detail_poster),f.poster_path);
-                detailIntent.putExtra(getString(R.string.detail_id),f.id);
-                detailIntent.putExtra(getString(R.string.detail_rating),f.vote_avg);
+                detailIntent.putExtra(getString(R.string.detail_poster), f.poster_path);
+                detailIntent.putExtra(getString(R.string.detail_id), f.id);
+                detailIntent.putExtra(getString(R.string.detail_rating), f.vote_avg);
                 //Launch detail activity
                 startActivity(detailIntent);
             }
         });
         Log.i("MAIN:onCreate", "Finished onCreate Layout setup");
         Log.i("MAIN:onCreate", "Attempting adapter udpate");
-        FetchPostersTask fetchPosters = new FetchPostersTask();
-        fetchPosters.execute();
+
+        updateMovies();
+
         return rootView;
     }
 
@@ -226,10 +262,19 @@ public class FilmFragment extends Fragment {
             //Now that we have movies from our API,
             //we can clear our ImageAdapter and refill it with the
             //new images we retrieved
-            //mImages.setContent(films);
-            //mImages.notifyDataSetChanged();
+
+            //Let's check SharedPreferences to see if we need to sort the collection
+            SharedPreferences settings = PreferenceManager.getDefaultSharedPreferences(getActivity());
+            String sortPref = settings.getString(getString(R.string.pref_sort_order_key),
+                               getString(R.string.pref_sort_order_default));
+            if (sortPref == getString(R.string.pref_sort_order_rating)) {
+                //Sort the arrayList by vote_average
+                Collections.sort(films,new voteCompare());
+            }
+            //Otherwise by popularity is the default
             filmAdapter.clear();
             filmAdapter.addAll(films);
+
         }
 
         private String executeAPICall(URL url) {
