@@ -3,7 +3,7 @@
 
     <string name="hello_world">Welcome to Filmster!</string>
     <string name="action_settings">Settings</string>
-    <string name="movie_db_sheme">http</string>
+    <string name="movie_db_scheme">http</string>
     <string name="movie_db_authority">api.themoviedb.org</string>
     <string name="movie_db_version">3</string>
     <string name="movie_db_discover">discover</string>

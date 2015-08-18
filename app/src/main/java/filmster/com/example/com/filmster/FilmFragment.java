@@ -43,7 +43,6 @@ import java.util.Comparator;
  */
 public class FilmFragment extends Fragment {
 
-    //private ImageAdapter mImages;
     private FilmAdapter filmAdapter;
 
     public FilmFragment() {
@@ -66,6 +65,18 @@ public class FilmFragment extends Fragment {
     public void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setHasOptionsMenu(true);
+
+    }
+
+    @Override
+    public void onStart() {
+        super.onStart();
+        updateMovies();
+    }
+
+    @Override
+    public void onResume() {
+        super.onResume();
     }
 
     @Override
@@ -82,42 +93,37 @@ public class FilmFragment extends Fragment {
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
 
-        View rootView = inflater.inflate(R.layout.fragment_main,container,false);
+        final View rootView = inflater.inflate(R.layout.fragment_main,container,false);
 
         GridView theGrid = (GridView) rootView.findViewById(R.id.gridview_fragment);
-
-        //mImages = new ImageAdapter(rootView.getContext());
 
         filmAdapter = new FilmAdapter(rootView.getContext(),R.id.grid_element, new ArrayList<Film>());
 
         theGrid.setAdapter(filmAdapter);
-        Log.i("MAIN:onCreate", "Adapter bound to Grid with " + filmAdapter.getCount() + "elements");
+        Log.i("MAIN:onCreateView", "Adapter bound to Grid with " + filmAdapter.getCount() + "elements");
 
 
         theGrid.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
             public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-                Film f = (Film) filmAdapter.getItem(position);
-                //Toast.makeText(view.getContext(), "Launching..." + position, Toast.LENGTH_SHORT).show();
-                //Launch the detail activity
-                Intent detailIntent = new Intent(view.getContext(), DetailActivity.class);
-                //Send the array position of the film we want to see details on
-                detailIntent.putExtra(getString(R.string.detail_title), f.title);
-                detailIntent.putExtra(getString(R.string.detail_synopsis), f.synopsis);
-                detailIntent.putExtra(getString(R.string.detail_release), f.release_date);
-                detailIntent.putExtra(getString(R.string.detail_poster), f.poster_path);
-                detailIntent.putExtra(getString(R.string.detail_id), f.id);
-                detailIntent.putExtra(getString(R.string.detail_rating), f.vote_avg);
-                //Launch detail activity
-                startActivity(detailIntent);
+                sendToDetail(view.getContext(), filmAdapter.getItem(position));
             }
         });
         Log.i("MAIN:onCreate", "Finished onCreate Layout setup");
-        Log.i("MAIN:onCreate", "Attempting adapter udpate");
-
-        updateMovies();
-
         return rootView;
+    }
+
+    public void sendToDetail(Context context, Film f) {
+        //Launch the detail activity
+        Intent detailIntent = new Intent(context, DetailActivity.class);
+        detailIntent.putExtra(getString(R.string.detail_title), f.title);
+        detailIntent.putExtra(getString(R.string.detail_synopsis), f.synopsis);
+        detailIntent.putExtra(getString(R.string.detail_release), f.release_date);
+        detailIntent.putExtra(getString(R.string.detail_poster), f.poster_path);
+        detailIntent.putExtra(getString(R.string.detail_id), f.id);
+        detailIntent.putExtra(getString(R.string.detail_rating), f.vote_avg);
+        //Launch detail activity
+        startActivity(detailIntent);
     }
 
     private class FilmAdapter extends ArrayAdapter<Film> {
@@ -138,34 +144,17 @@ public class FilmFragment extends Fragment {
             if (convertView == null) {
                 // if it's not recycled, initialize some attributes
                 imageView = new ImageView(context);
-                imageView.setLayoutParams(new GridView.LayoutParams(342, 513));
-                imageView.setScaleType(ImageView.ScaleType.CENTER);
-                imageView.setPadding(8, 8, 8, 8);
+                imageView.setLayoutParams(new GridView.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+                imageView.setScaleType(ImageView.ScaleType.CENTER_CROP);
             } else {
                 imageView = (ImageView) convertView;
             }
 
-            //Get the URL fragment from the mFimList element
-            String img_url_fragment = films.get(position).poster_path;
-            String img_size = "w342";
-            //Build the URL for Picasso to query with
-            //http://image.tmdb.org/t/p/w185//nBNZadXqJSdt05SHLqgT0HuC5Gm.jpg
-            Uri.Builder img_url = new Uri.Builder();
-            img_url.scheme("http");  //// TODO: 8/13/15 Fix these hardcoded values
-            img_url.authority("image.tmdb.org");
-            img_url.appendPath("t");
-            img_url.appendPath("p");
-            img_url.appendPath(img_size);
-            img_url.appendPath(img_url_fragment);
-            try {
-                img_url.build();
-            } catch (UnsupportedOperationException e){
-                Log.e("IMGAdapter:getView", "Could not build img URL " + e);
-            }
-            Log.i("IMGAdapter:getView", "Attempting to fetch: " + img_url.toString());
+            Film thisMovie = getItem(position);
+            Log.i("getView: ", "Getting: " + thisMovie.poster_path);
             // Use Picasso to load the image into this imageView
             Picasso.with(context)
-                    .load(img_url.toString())
+                    .load(thisMovie.poster_path)
                     .error(R.drawable.sample_3)
                     .into(imageView);
             return imageView;
@@ -181,15 +170,13 @@ public class FilmFragment extends Fragment {
         protected ArrayList<Film> doInBackground(Void... params) {
             //Build the URL to query themoviedb.org API with
             Uri.Builder pop_movies_request = new Uri.Builder();
-            pop_movies_request.scheme(getString(R.string.movie_db_sheme));
+            pop_movies_request.scheme(getString(R.string.movie_db_scheme));
             pop_movies_request.authority(getString(R.string.movie_db_authority));
             pop_movies_request.appendPath(getString(R.string.movie_db_version));
             pop_movies_request.appendPath(getString(R.string.movie_db_discover));
             pop_movies_request.appendPath(getString(R.string.movie_db_movie));
-            // TODO: 8/11/15  :
-            //Add logic here make sure we get the right parameters based on
-            //SharedPrefs setting
-            //In order to make keep the integrity of themoviedb.or API and my own account
+
+            //In order to make keep the integrity of themoviedb.org API and my own account
             //I have removed my own API key from this repo.  If you want to rebuild this code from
             //a cloned repo, you will have to add a string resource file containing your own API key to
             //make this code work.
@@ -228,23 +215,52 @@ public class FilmFragment extends Fragment {
         }
 
         private ArrayList<Film> parseDiscoverResponse(String api_response) {
-            ArrayList<Film> theList = new ArrayList<Film>();
+            //API URL queries
+            final String MDB_URL_SCHEME = "http";
+            final String MDB_URL_AUTH = "image.tmdb.org";
+            final String MDB_URL_PATH_T = "t";
+            final String MDB_URL_PATH_P = "p";
+            final String MDB_URL_IMG = "w342";
+
+            //JSON Parsing constants
+            final String MDB_JSON_RESULTS = "results";
+            final String MDB_JSON_ID = "id";
+            final String MDB_JSON_TITLE = "title";
+            final String MDB_JSON_RELEASE = "release_date";
+            final String MDB_JSON_PLOT = "overview";
+            final String MDB_JSON_RATING = "vote_average";
+
+
+            ArrayList<Film> theList = new ArrayList<>();
             //Try to parse the JSON objects out of the list
             try {
                 JSONObject jObject = new JSONObject(api_response);
-                JSONArray resultsArray = jObject.getJSONArray("results");
+                JSONArray resultsArray = jObject.getJSONArray(MDB_JSON_RESULTS);
                 //Iterate through the results and grab the movie details
                 for (int i = 0; i < resultsArray.length(); i++){
                     JSONObject filmResult = resultsArray.getJSONObject(i);
                     Film film = new Film();
-                    film.id = filmResult.getString("id");
+                    film.id = filmResult.getString(MDB_JSON_ID);
                     film.poster_path = filmResult.getString("poster_path");
-                    //remove leading '/'
-                    film.poster_path = film.poster_path.substring(1);
-                    film.title = filmResult.getString("title");
-                    film.release_date = filmResult.getString("release_date");
-                    film.synopsis = filmResult.getString("overview");
-                    film.vote_avg = new Float(filmResult.getDouble("vote_average"));
+                    if (film.poster_path != null) {
+                        //remove leading '/' from path fragment
+                        film.poster_path = film.poster_path.substring(1);
+                        //Build the full poster url
+                        Uri.Builder img_url = new Uri.Builder();
+                        img_url.scheme(MDB_URL_SCHEME);
+                        img_url.authority(MDB_URL_AUTH);
+                        img_url.appendPath(MDB_URL_PATH_T);
+                        img_url.appendPath(MDB_URL_PATH_P);
+                        img_url.appendPath(MDB_URL_IMG);
+                        img_url.appendPath(film.poster_path);
+                        img_url.build();
+                        film.poster_path = img_url.toString();
+                    }
+
+                    film.title = filmResult.getString(MDB_JSON_TITLE);
+                    film.release_date = filmResult.getString(MDB_JSON_RELEASE);
+                    film.synopsis = filmResult.getString(MDB_JSON_PLOT);
+                    film.vote_avg = new Float(filmResult.getDouble(MDB_JSON_RATING));
                     theList.add(film);
                 }
 
@@ -267,14 +283,16 @@ public class FilmFragment extends Fragment {
             SharedPreferences settings = PreferenceManager.getDefaultSharedPreferences(getActivity());
             String sortPref = settings.getString(getString(R.string.pref_sort_order_key),
                                getString(R.string.pref_sort_order_default));
-            if (sortPref == getString(R.string.pref_sort_order_rating)) {
+
+            Log.i(LOG_TAG,"Sort Order pref: " + sortPref);
+            if (sortPref.equals(getString(R.string.pref_sort_order_rating))) {
                 //Sort the arrayList by vote_average
-                Collections.sort(films,new voteCompare());
+                Log.i(LOG_TAG, "Rating setting detected: sorting...");
+                Collections.sort(films, Collections.reverseOrder(new voteCompare()));
             }
             //Otherwise by popularity is the default
             filmAdapter.clear();
             filmAdapter.addAll(films);
-
         }
 
         private String executeAPICall(URL url) {
@@ -284,10 +302,7 @@ public class FilmFragment extends Fragment {
             BufferedReader reader = null;
 
             try{
-                //// TODO: 8/14/15
-                //Need to move this to the FetchWeatherTask since it's already wrapped in try/catch
-                //All Url's should be completely build by now.
-                // Possible parameters are available at OWM's forecast API page, at
+
                 // Create the request to the API, and open the connection
                 urlConnection = (HttpURLConnection) url.openConnection();
                 urlConnection.setRequestMethod("GET");
