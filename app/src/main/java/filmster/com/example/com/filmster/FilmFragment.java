@@ -3,6 +3,8 @@ package filmster.com.example.com.filmster;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
@@ -20,6 +22,7 @@ import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.GridView;
 import android.widget.ImageView;
+import android.widget.Toast;
 
 import com.squareup.picasso.Picasso;
 
@@ -43,7 +46,11 @@ import java.util.Comparator;
  */
 public class FilmFragment extends Fragment {
 
+    private ArrayList<Film> myFlix;
+
     private FilmAdapter filmAdapter;
+
+    private final String MOVIE_LIST_KEY = "POPULAR";
 
     public FilmFragment() {
 
@@ -56,9 +63,55 @@ public class FilmFragment extends Fragment {
         }
     }
 
+    public class popCompare implements Comparator<Film> {
+        @Override
+        public int compare(Film lhs, Film rhs) {
+            return lhs.popularity.compareTo(rhs.popularity);
+        }
+    }
+
     private void updateMovies() {
-        FetchPostersTask fetchPosters = new FetchPostersTask();
-        fetchPosters.execute();
+
+        //Need to check for Internet Connectivity before attempting execute the update
+        ConnectivityManager cm = (ConnectivityManager) getActivity().getSystemService(Context.CONNECTIVITY_SERVICE);
+        NetworkInfo myNet = cm.getActiveNetworkInfo();
+        if (myNet == null || !myNet.isConnected()) {
+            Toast.makeText(this.getActivity(),
+                           "No internet detected. Please check connections.",
+                           Toast.LENGTH_SHORT).show();
+        }
+        else {
+            FetchPostersTask fetchPosters = new FetchPostersTask();
+            try {
+                fetchPosters.execute();
+            }
+            catch(Exception e) {
+                Toast.makeText(this.getActivity(),"Unknown error occured. Please restart.",Toast.LENGTH_LONG);
+            }
+
+        }
+    }
+
+    @Override
+    public void onStart() {
+        super.onStart();
+        if (myFlix != null) {
+            //Let's check SharedPreferences to see if we need to sort the collection
+            SharedPreferences settings = PreferenceManager.getDefaultSharedPreferences(getActivity());
+            String sortPref = settings.getString(getString(R.string.pref_sort_order_key),
+                    getString(R.string.pref_sort_order_default));
+
+            if (sortPref.equals(getString(R.string.pref_sort_order_rating))) {
+                //Sort the arrayList by vote_average
+                Collections.sort(myFlix, Collections.reverseOrder(new voteCompare()));
+            }
+            else {
+                //Sort the arrayList by popularity
+                Collections.sort(myFlix, Collections.reverseOrder(new popCompare()));
+            }
+        }
+
+        filmAdapter.notifyDataSetChanged();
     }
 
     @Override
@@ -66,18 +119,41 @@ public class FilmFragment extends Fragment {
         super.onCreate(savedInstanceState);
         setHasOptionsMenu(true);
 
+        //Fetch Movies or Restore from Bundle
+        //Check to see if there's data to restore
+        if (savedInstanceState != null) {
+            //Restore the Films from the Bundle
+            ArrayList<Film> savedMovies = savedInstanceState.getParcelableArrayList(MOVIE_LIST_KEY);
+            if (savedMovies != null) {
+                myFlix = savedMovies;
+            }
+            else {
+                //Somehow we didn't save anything.
+                //Better initialize myFlix
+                myFlix = new ArrayList<>();
+                //Attempt to get some movies now
+                updateMovies();
+            }
+
+        }
+        else {
+            //This is the first time we're creating the activity
+            //So, go get the movies already!
+            myFlix = new ArrayList<Film>();
+            updateMovies();
+        }
     }
 
     @Override
-    public void onStart() {
-        super.onStart();
-        updateMovies();
+    public void onSaveInstanceState(Bundle outState) {
+        super.onSaveInstanceState(outState);
+        //Save what's in the adapter, if anything
+        ArrayList<Film> theMovies = filmAdapter.films;
+        if (!theMovies.isEmpty()) {
+            outState.putParcelableArrayList(MOVIE_LIST_KEY,theMovies);
+        }
     }
 
-    @Override
-    public void onResume() {
-        super.onResume();
-    }
 
     @Override
     public void onCreateOptionsMenu(Menu menu, MenuInflater inflater) {
@@ -97,11 +173,7 @@ public class FilmFragment extends Fragment {
 
         GridView theGrid = (GridView) rootView.findViewById(R.id.gridview_fragment);
 
-        filmAdapter = new FilmAdapter(rootView.getContext(),R.id.grid_element, new ArrayList<Film>());
-
-        theGrid.setAdapter(filmAdapter);
-        Log.i("MAIN:onCreateView", "Adapter bound to Grid with " + filmAdapter.getCount() + "elements");
-
+        filmAdapter = new FilmAdapter(rootView.getContext(),R.id.grid_element, myFlix);
 
         theGrid.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
@@ -109,7 +181,9 @@ public class FilmFragment extends Fragment {
                 sendToDetail(view.getContext(), filmAdapter.getItem(position));
             }
         });
-        Log.i("MAIN:onCreate", "Finished onCreate Layout setup");
+
+        //Bind the adapter to the View
+        theGrid.setAdapter(filmAdapter);
         return rootView;
     }
 
@@ -151,7 +225,7 @@ public class FilmFragment extends Fragment {
             }
 
             Film thisMovie = getItem(position);
-            Log.i("getView: ", "Getting: " + thisMovie.poster_path);
+
             // Use Picasso to load the image into this imageView
             Picasso.with(context)
                     .load(thisMovie.poster_path)
@@ -197,8 +271,6 @@ public class FilmFragment extends Fragment {
             }
             //Make the call
             String api_response = executeAPICall(url);
-            Log.i(LOG_TAG, "Film API Response: " + api_response);
-
             //movies array to hold the returned movie objects
             ArrayList<Film> movies = null;
 
@@ -229,6 +301,7 @@ public class FilmFragment extends Fragment {
             final String MDB_JSON_RELEASE = "release_date";
             final String MDB_JSON_PLOT = "overview";
             final String MDB_JSON_RATING = "vote_average";
+            final String MDB_JSON_POP = "popularity";
 
 
             ArrayList<Film> theList = new ArrayList<>();
@@ -261,6 +334,7 @@ public class FilmFragment extends Fragment {
                     film.release_date = filmResult.getString(MDB_JSON_RELEASE);
                     film.synopsis = filmResult.getString(MDB_JSON_PLOT);
                     film.vote_avg = new Float(filmResult.getDouble(MDB_JSON_RATING));
+                    film.popularity = filmResult.getDouble(MDB_JSON_POP);
                     theList.add(film);
                 }
 
@@ -274,25 +348,15 @@ public class FilmFragment extends Fragment {
 
         @Override
         protected void onPostExecute(ArrayList<Film> films) {
-            super.onPostExecute(films);
-            //Now that we have movies from our API,
-            //we can clear our ImageAdapter and refill it with the
-            //new images we retrieved
+            if (films != null) {
+                super.onPostExecute(films);
+                //Now that we have movies from our API,
+                //we can clear our ImageAdapter and refill it with the
+                //new images we retrieved
 
-            //Let's check SharedPreferences to see if we need to sort the collection
-            SharedPreferences settings = PreferenceManager.getDefaultSharedPreferences(getActivity());
-            String sortPref = settings.getString(getString(R.string.pref_sort_order_key),
-                               getString(R.string.pref_sort_order_default));
-
-            Log.i(LOG_TAG,"Sort Order pref: " + sortPref);
-            if (sortPref.equals(getString(R.string.pref_sort_order_rating))) {
-                //Sort the arrayList by vote_average
-                Log.i(LOG_TAG, "Rating setting detected: sorting...");
-                Collections.sort(films, Collections.reverseOrder(new voteCompare()));
+                filmAdapter.clear();
+                filmAdapter.addAll(films);
             }
-            //Otherwise by popularity is the default
-            filmAdapter.clear();
-            filmAdapter.addAll(films);
         }
 
         private String executeAPICall(URL url) {
@@ -331,7 +395,6 @@ public class FilmFragment extends Fragment {
                 }
                 else {
                     movieData = buffer.toString();
-                    Log.i(LOG_TAG, "JSON Response: " + movieData);
                 }
             } catch (IOException e) {
                 Log.e(LOG_TAG, "Error ", e);
