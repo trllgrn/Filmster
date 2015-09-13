@@ -39,6 +39,8 @@ import java.util.List;
  * A placeholder fragment containing a simple view.
  */
 public class DetailActivityFragment extends Fragment {
+    private LinearLayout top = null;
+    private LinearLayout reviewSectionTop = null;
     private ClipAdapter trailerAdapter = null;
     private Film thisFilm = null;
     private ArrayList<Review> reviews = null;
@@ -263,6 +265,28 @@ public class DetailActivityFragment extends Fragment {
             trailerAdapter.addAll(videos);
             trailerAdapter.notifyDataSetChanged();
             Log.i("FetchDetails", "trailer adapter count: " + trailerAdapter.getCount());
+
+            //Reviews
+            Log.i("FetchDetails", "Reviews: " + reviews.toString());
+            //No adapter for the Reviews, so we need to update the UI manually
+            //Not sure if this is the right way but hope it works
+            if(!reviews.isEmpty()) {
+                TextView rvw_contentTemplate = (TextView) reviewSectionTop.findViewById(R.id.detail_review_content);
+                TextView rvw_authorTemplate = (TextView) reviewSectionTop.findViewById(R.id.detail_review_author);
+
+                //Retreive the content from reviews arraylist
+                for (Review r : reviews){
+                    TextView rvw_content = new TextView(top.getContext());
+                    TextView rvw_author = new TextView(top.getContext());
+                    rvw_content.setText(r.content);
+                    rvw_author.setText("-" + r.author);
+                    reviewSectionTop.addView(rvw_content);
+                    reviewSectionTop.addView(rvw_author);
+                }
+
+                top.addView(reviewSectionTop);
+            }
+
         }
     }
 
@@ -279,12 +303,16 @@ public class DetailActivityFragment extends Fragment {
             //TODO:
             //Recover additional details fetched from the API
             ArrayList<Clip> savedVids = savedInstanceState.getParcelableArrayList(getString(R.string.detail_fetched_vids));
-            if (savedVids != null) {
+            ArrayList<Review> savedReviews = savedInstanceState.getParcelableArrayList(getString(R.string.detail_fetched_reviews));
+            if (savedVids != null && savedReviews != null) {
                 videos = savedVids;
+                reviews = savedReviews;
             }
             else {
                 //Somehow we saved an null list
                 videos = new ArrayList<>();
+                //initialize the reviews array too
+                reviews = new ArrayList<>();
 
                 if (thisFilm != null) {
                     getMovieDetails();
@@ -307,6 +335,9 @@ public class DetailActivityFragment extends Fragment {
                 //initialize the clips array
                 videos = new ArrayList<>();
 
+                //initialize the reviews array too
+                reviews = new ArrayList<>();
+
                 if (thisFilm != null) {
                     getMovieDetails();
                 }
@@ -321,7 +352,19 @@ public class DetailActivityFragment extends Fragment {
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
 
+        ArrayList<Review> dummyReviews = new ArrayList<>();
+
+        //Fill with dummydata
+        for (int i = 0; i < 5; i++){
+            Review fake = new Review();
+            fake.content = "Good action movie with a decent script for the genre. The photography is really good too but, in the end, it is quite repeating itself from beginning to end and the stormy OST is exhausting.";
+            fake.author = "tanty";
+            dummyReviews.add(fake);
+        }
+
         View rootView = inflater.inflate(R.layout.fragment_detail, container, false);
+
+        top = (LinearLayout) rootView.findViewById(R.id.detail_layout_top);
 
         ImageView posterView = (ImageView) rootView.findViewById(R.id.film_detail_poster);
         TextView titleTextView = (TextView) rootView.findViewById(R.id.film_title);
@@ -330,7 +373,7 @@ public class DetailActivityFragment extends Fragment {
         TextView ratingView = (TextView) rootView.findViewById(R.id.film_rating);
         //videoList = (LinearLayout) rootView.findViewById(R.id.detail_trailers_list);
         ListView videoListView = (ListView) rootView.findViewById(R.id.detail_trailers_listview);
-        ListView reviewsListView = (ListView) rootView.findViewById(R.id.detail_reviews_listview);
+        //ListView reviewsListView = (ListView) rootView.findViewById(R.id.detail_reviews_listview);
 
         trailerAdapter = new ClipAdapter(rootView.getContext(),R.layout.fragment_detail,videos);
 
@@ -351,6 +394,35 @@ public class DetailActivityFragment extends Fragment {
 
         //Load up the Poster
         Picasso.with(rootView.getContext()).load(thisFilm.poster_path).into(posterView);
+
+
+
+        //Inflate the review section XML
+
+        View reviewSection = inflater.inflate(R.layout.detail_review_item,container, false);
+
+        reviewSectionTop = (LinearLayout) reviewSection.findViewById(R.id.review_layout_top);
+
+        Log.i("Detail:onCreateView", "Dummy Review Count: " + reviews.size());
+
+        if(!reviews.isEmpty()) {
+            TextView rvw_contentTemplate = (TextView) reviewSection.findViewById(R.id.detail_review_content);
+            TextView rvw_authorTemplate = (TextView) reviewSection.findViewById(R.id.detail_review_author);
+
+            //Retreive the content from reviews arraylist
+            for (Review r : reviews){
+                TextView rvw_content = new TextView(rootView.getContext());
+                TextView rvw_author = new TextView(rootView.getContext());
+                rvw_content.setText(r.content);
+                rvw_author.setText("-" + r.author);
+                reviewSectionTop.addView(rvw_content);
+                reviewSectionTop.addView(rvw_author);
+            }
+
+            top.addView(reviewSectionTop);
+        }
+
+
 
         Log.i("Detail:onCreateView", "Finished building the detail layout.");
 
@@ -389,7 +461,7 @@ public class DetailActivityFragment extends Fragment {
         outState.putParcelableArrayList(getString(R.string.detail_fetched_vids),videos);
 
         //Save the reviews List
-        //outState.putParcelableArrayList(reviews);
+        outState.putParcelableArrayList(getString(R.string.detail_fetched_reviews), reviews);
     }
 
     private class ClipAdapter extends ArrayAdapter<Clip> {
