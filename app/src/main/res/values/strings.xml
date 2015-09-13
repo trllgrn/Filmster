@@ -12,12 +12,16 @@
     <string name="movie_db_api_param">api_key</string>
     <string name="movie_db_sort_val_popular">popularity.desc</string>
     <string name="movid_db_sort_val_hi_rated">vote_average.desc</string>
+    <string name="detail_film_object">selectedFilm</string>
     <string name="detail_title">detail</string>
     <string name="detail_id">id</string>
     <string name="detail_rating">rating</string>
     <string name="detail_release">release_date</string>
     <string name="detail_synopsis">overview</string>
     <string name="detail_poster">poster_url</string>
+    <string name="detail_trailer_section_heading">Trailers</string>
+    <string name="detail_reviews_section_heading">Reviews</string>
+    <string name="detail_fetched_vids">fetched_videos</string>
     <string name="title_activity_detail">Details</string>
     <string name="title_activity_settings">Settings</string>
     <string name="pref_sort_order_label">Sort Order</string>

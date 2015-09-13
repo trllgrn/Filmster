@@ -190,13 +190,8 @@ public class FilmFragment extends Fragment {
     public void sendToDetail(Context context, Film f) {
         //Launch the detail activity
         Intent detailIntent = new Intent(context, DetailActivity.class);
-        detailIntent.putExtra(getString(R.string.detail_title), f.title);
-        detailIntent.putExtra(getString(R.string.detail_synopsis), f.synopsis);
-        detailIntent.putExtra(getString(R.string.detail_release), f.release_date);
-        detailIntent.putExtra(getString(R.string.detail_poster), f.poster_path);
-        detailIntent.putExtra(getString(R.string.detail_id), f.id);
-        detailIntent.putExtra(getString(R.string.detail_rating), f.vote_avg);
-        //Launch detail activity
+        detailIntent.putExtra(getString(R.string.detail_film_object),f);
+
         startActivity(detailIntent);
     }
 
