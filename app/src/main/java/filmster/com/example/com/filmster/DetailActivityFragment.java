@@ -2,11 +2,13 @@ package filmster.com.example.com.filmster;
 
 import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
+import android.preference.PreferenceManager;
 import android.support.v4.app.Fragment;
 import android.util.Log;
 import android.view.LayoutInflater;
@@ -14,6 +16,8 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
+import android.widget.CheckBox;
+import android.widget.CompoundButton;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ListView;
@@ -33,6 +37,7 @@ import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 
 /**
@@ -355,7 +360,7 @@ public class DetailActivityFragment extends Fragment {
         ArrayList<Review> dummyReviews = new ArrayList<>();
 
         //Fill with dummydata
-        for (int i = 0; i < 5; i++){
+        for (int i = 0; i < 5; i++) {
             Review fake = new Review();
             fake.content = "Good action movie with a decent script for the genre. The photography is really good too but, in the end, it is quite repeating itself from beginning to end and the stormy OST is exhausting.";
             fake.author = "tanty";
@@ -371,9 +376,40 @@ public class DetailActivityFragment extends Fragment {
         TextView synopsisTextView = (TextView) rootView.findViewById(R.id.film_synopsis);
         TextView releaseView = (TextView) rootView.findViewById(R.id.film_release);
         TextView ratingView = (TextView) rootView.findViewById(R.id.film_rating);
+        CheckBox favBtnView = (CheckBox) rootView.findViewById(R.id.detail_button_fav);
         //videoList = (LinearLayout) rootView.findViewById(R.id.detail_trailers_list);
         ListView videoListView = (ListView) rootView.findViewById(R.id.detail_trailers_listview);
         //ListView reviewsListView = (ListView) rootView.findViewById(R.id.detail_reviews_listview);
+
+        //Set the status of the CheckBox to whatever the favorites member is
+        favBtnView.setChecked(thisFilm.favorite);
+
+        //Set up a listener for the CheckBox item
+        favBtnView.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+            @Override
+            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+                SharedPreferences settings = PreferenceManager.getDefaultSharedPreferences(getActivity());
+                SharedPreferences.Editor editor = settings.edit();
+                HashSet<String> favs = (HashSet) settings.getStringSet(getString(R.string.pref_fav_key),new HashSet<String>());
+
+                if (isChecked){
+                    //We want to set this movie as a favorite
+                    Log.i("favBtnChecked", "Storing this movie in our favorites Set");
+                    favs.add(thisFilm.id);
+
+                }
+                else {
+                    //We want to remove this movie from our favorites
+                    Log.i("favBtnUnchecked", "Removing this movie from our favorites Set");
+                    favs.remove(thisFilm.id);
+
+                }
+
+                editor.putStringSet(getString(R.string.pref_fav_key),favs).commit();
+            }
+
+        });
+
 
         trailerAdapter = new ClipAdapter(rootView.getContext(),R.layout.fragment_detail,videos);
 

@@ -40,6 +40,7 @@ import java.net.URL;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashSet;
 
 /**
  * Created by tgreen on 8/13/15.
@@ -105,9 +106,12 @@ public class FilmFragment extends Fragment {
                 //Sort the arrayList by vote_average
                 Collections.sort(myFlix, Collections.reverseOrder(new voteCompare()));
             }
-            else {
+            else if (sortPref.equals(getString(R.string.pref_sort_order_popular))){
                 //Sort the arrayList by popularity
                 Collections.sort(myFlix, Collections.reverseOrder(new popCompare()));
+            }
+            else if (sortPref.equals(getString(R.string.pref_sort_order_fav))) {
+                //Filter the collection by favorite
             }
         }
 
@@ -118,6 +122,9 @@ public class FilmFragment extends Fragment {
     public void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setHasOptionsMenu(true);
+
+        //Fetch saved Favorites from Bundle
+
 
         //Fetch Movies or Restore from Bundle
         //Check to see if there's data to restore
@@ -338,7 +345,28 @@ public class FilmFragment extends Fragment {
                 Log.e(LOG_TAG,"Trouble with api response: " + e);
             }
 
+            //Set up the favorites
+            setFavorites(theList);
+
             return theList;
+        }
+
+        protected void setFavorites(ArrayList<Film> list) {
+            //Get the favorite list from sharedPrefs and see who's on it
+            SharedPreferences settings = PreferenceManager.getDefaultSharedPreferences(getActivity());
+            //Retreive favorites list
+            HashSet<String> favs = (HashSet) settings.getStringSet(getString(R.string.pref_fav_key),new HashSet<String>() );
+
+            if (favs != null) {
+                if (!favs.isEmpty()) {
+                    //traverse through the list of returned movies and determine if they are in the set
+                    for (Film f : list) {
+                        if (favs.contains(f.id)) {
+                            f.favorite = true;
+                        }
+                    }
+                }
+            }
         }
 
         @Override

@@ -19,6 +19,7 @@ public class Film implements Parcelable {
         release_date = null;
         poster_path = null;
         popularity = null;
+        favorite = false;
     }
 
     //Parcelable Constructor
@@ -33,6 +34,7 @@ public class Film implements Parcelable {
         this.release_date = (String) myStuff[4];
         this.poster_path = (String) myStuff[5];
         this.popularity = (Double) myStuff[6];
+        this.favorite = (Boolean) myStuff[7];
     }
 
     public String id;
@@ -42,6 +44,7 @@ public class Film implements Parcelable {
     public String release_date;
     public String poster_path;
     public Double popularity;
+    public Boolean favorite;
 
     @Override
     public int describeContents() {
@@ -52,7 +55,7 @@ public class Film implements Parcelable {
     public void writeToParcel(Parcel dest, int flags) {
         //Dump in the data to pack up.
         //Bye, guys. Come back soon, k?
-        Object[] myStuff = {id,title,vote_avg,synopsis,release_date,poster_path,popularity};
+        Object[] myStuff = {id,title,vote_avg,synopsis,release_date,poster_path,popularity,favorite};
         dest.writeArray(myStuff);
     }
 
