@@ -14,13 +14,10 @@ import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.AdapterView;
-import android.widget.ArrayAdapter;
 import android.widget.CheckBox;
 import android.widget.CompoundButton;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
-import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -38,20 +35,27 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.HashSet;
-import java.util.List;
 
 /**
  * A placeholder fragment containing a simple view.
  */
 public class DetailActivityFragment extends Fragment {
-    private LinearLayout top = null;
+    //Layout variable resources
+    private LinearLayout topView = null;
     private LinearLayout reviewSectionTop = null;
-    private ClipAdapter trailerAdapter = null;
+    private LinearLayout trailersHolderView = null;
+    private ImageView posterView = null;
+    private TextView titleTextView = null;
+    private TextView synopsisTextView = null;
+    private TextView releaseView = null;
+    private TextView ratingView = null;
+    private CheckBox favBtnView = null;
+
     private Film thisFilm = null;
     private ArrayList<Review> reviews = null;
     private ArrayList<Clip> videos = null;
-    private LinearLayout videoList = null;
 
+    static final String DETAIL_URI = "URI";
 
     public DetailActivityFragment() {
     }
@@ -72,9 +76,72 @@ public class DetailActivityFragment extends Fragment {
                 fetchDetails.execute();
             }
             catch(Exception e) {
-                Toast.makeText(this.getActivity(),"Unknown error occured. Please restart.",Toast.LENGTH_LONG);
+                Toast.makeText(this.getActivity(),
+                               "Unknown error occured. Please restart.",Toast.LENGTH_LONG);
             }
 
+        }
+    }
+
+    private void setVideoContent(Context context){
+        if (videos != null) {
+            String trailer_template_url = "http://img.youtube.com/vi/%s/mqdefault.jpg";
+
+            for (Clip c : videos) {
+                //Traverse through each element in the list and add it to the
+                //Layout
+
+                ImageView imageView = new ImageView(context);
+                imageView.setLayoutParams(new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
+                        ViewGroup.LayoutParams.MATCH_PARENT));
+                imageView.setPadding(10, 10, 10, 10);
+                imageView.setScaleType(ImageView.ScaleType.CENTER);
+
+                //Format the trailer_url to load the image with.
+                String trailer_preview_url = String.format(trailer_template_url, c.key);
+
+                Picasso.with(context)
+                        .load(trailer_preview_url)
+                        .error(R.drawable.sample_3)
+                        .into(imageView);
+
+                //Store the Clip object with this ImageView
+                imageView.setTag(c);
+
+                //Now we need to set the onclickListener for this ImageView
+                imageView.setOnClickListener(new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        sendToYoutube(v.getContext(), (Clip) v.getTag());
+                    }
+                });
+
+
+                //Assuming we've loaded the image correctly, now it's time to insert it into the layout
+
+                trailersHolderView.addView(imageView);
+            }
+        }
+    }
+
+    private void setReviewContent(Context context){
+        //Reviews
+        //No adapter for the Reviews, so we need to update the UI manually
+        //Not sure if this is the right way but hope it works
+        if(!reviews.isEmpty()) {
+            //TextView rvw_contentTemplate = (TextView) reviewSectionTop.findViewById(R.id.detail_review_content);
+            //TextView rvw_authorTemplate = (TextView) reviewSectionTop.findViewById(R.id.detail_review_author);
+
+            //Retrieve the content from reviews arraylist
+            for (Review r : reviews){
+                TextView rvw_content = new TextView(context);
+                TextView rvw_author = new TextView(context);
+                rvw_author.setPadding(0,0,0,12);
+                rvw_content.setText(r.content);
+                rvw_author.setText("-" + r.author);
+                reviewSectionTop.addView(rvw_content);
+                reviewSectionTop.addView(rvw_author);
+            }
         }
     }
 
@@ -107,15 +174,11 @@ public class DetailActivityFragment extends Fragment {
                 Log.e(LOG_TAG,"URL Creation ERROR",e);
             }
 
-            Log.i(LOG_TAG,"Built URL: " + url);
-
             //Make the call
             String api_response = executeAPICall(url);
 
             //Parse the API response
-            Log.i("FetchTask:doInBack", "JSON Reply: " + api_response);
             //Extract extra movie details
-            //parseExtraDetails(api_response);
             //Extract movie reviews
             reviews = parseReviews(api_response);
             //Extract movie trailers
@@ -141,10 +204,8 @@ public class DetailActivityFragment extends Fragment {
                 JSONObject movieResponse = new JSONObject(response);
                 //Get the trailers object
                 JSONObject trailersObj = movieResponse.getJSONObject(MDB_JSON_TRAILERS);
-                Log.i(LOG_TAG,"trailers JSON: " + trailersObj.toString());
                 //Get the JSON Array for youtube
                 JSONArray youtubeArray = trailersObj.getJSONArray(MDB_JSON_TRAILER_SOURCE);
-                Log.i(LOG_TAG, "youtube list JSON:" +  youtubeArray.toString());
                 //Create a new Clip entry for each video
                 if (youtubeArray.length() > 0) {
                     for (int i = 0; i < youtubeArray.length(); i++) {
@@ -157,7 +218,6 @@ public class DetailActivityFragment extends Fragment {
                         clipList.add(clipEntry);
                     }
 
-                    Log.i(LOG_TAG,"Captured clips: " + clipList.toString());
                 }
 
             }catch (Exception e) {
@@ -262,36 +322,22 @@ public class DetailActivityFragment extends Fragment {
             super.onPostExecute(aVoid);
 
             //Back on the UI thread
-            Log.i("FetchDetails", "Trailers: " + videos.toString());
 
-            //Since we updated the backing videos data structure
-            //We might need to call dataSetChanged on the adapter
-            trailerAdapter.clear();
-            trailerAdapter.addAll(videos);
-            trailerAdapter.notifyDataSetChanged();
-            Log.i("FetchDetails", "trailer adapter count: " + trailerAdapter.getCount());
+            //We should have videos and reviews now, if there were any.
 
-            //Reviews
-            Log.i("FetchDetails", "Reviews: " + reviews.toString());
-            //No adapter for the Reviews, so we need to update the UI manually
-            //Not sure if this is the right way but hope it works
-            if(!reviews.isEmpty()) {
-                TextView rvw_contentTemplate = (TextView) reviewSectionTop.findViewById(R.id.detail_review_content);
-                TextView rvw_authorTemplate = (TextView) reviewSectionTop.findViewById(R.id.detail_review_author);
 
-                //Retreive the content from reviews arraylist
-                for (Review r : reviews){
-                    TextView rvw_content = new TextView(top.getContext());
-                    TextView rvw_author = new TextView(top.getContext());
-                    rvw_content.setText(r.content);
-                    rvw_author.setText("-" + r.author);
-                    reviewSectionTop.addView(rvw_content);
-                    reviewSectionTop.addView(rvw_author);
-                }
+            //Set the context
+            Context context = topView.getContext();
+            //Check to see if there are any videos to set up
+            if (videos != null) {
+                //Videos should be placed into the Video Container Layout
+                setVideoContent(context);
 
-                top.addView(reviewSectionTop);
             }
 
+            if (reviews != null) {
+                setReviewContent(context);
+            }
         }
     }
 
@@ -303,12 +349,13 @@ public class DetailActivityFragment extends Fragment {
         //Initiate calls to get reviews from the API server
         //Get the trailer from the server
         if (savedInstanceState != null) {
-            //recovering from being hidden
+            //recover the selected film from Bundle
             thisFilm = savedInstanceState.getParcelable(getString(R.string.detail_film_object));
-            //TODO:
+
             //Recover additional details fetched from the API
             ArrayList<Clip> savedVids = savedInstanceState.getParcelableArrayList(getString(R.string.detail_fetched_vids));
             ArrayList<Review> savedReviews = savedInstanceState.getParcelableArrayList(getString(R.string.detail_fetched_reviews));
+
             if (savedVids != null && savedReviews != null) {
                 videos = savedVids;
                 reviews = savedReviews;
@@ -331,24 +378,36 @@ public class DetailActivityFragment extends Fragment {
         else {
             //this is the first time we're launched
             //need to retrieve the Film object from the intent that launched us.
-            Intent intent = getActivity().getIntent();
-            if (intent.hasExtra(getString(R.string.detail_film_object))) {
-                thisFilm = intent.getExtras().getParcelable(getString(R.string.detail_film_object));
+            //But how did we get launched?
+            //If we're in two pane mode, the we got launched via args Bundle
+            Bundle args = getArguments();
+            if (args == null) {
+                //We got launched via Intent
+                Intent intent = getActivity().getIntent();
+                if (intent.hasExtra(getString(R.string.detail_film_object))) {
+                    thisFilm = intent.getExtras().getParcelable(getString(R.string.detail_film_object));
 
-                //Now that we have our film, let's grab the other info from the api
-
-                //initialize the clips array
-                videos = new ArrayList<>();
-
-                //initialize the reviews array too
-                reviews = new ArrayList<>();
-
-                if (thisFilm != null) {
-                    getMovieDetails();
                 }
-                else {
-                    Log.i("Details:onCreate","Film intent was null! Oh no!");
+            } else {
+                //We got launched from the Main Activity
+                //Retrieve the film from the Bundle
+                if (args.containsKey(getString(R.string.detail_film_object))) {
+                    thisFilm = args.getParcelable(getString(R.string.detail_film_object));
                 }
+            }
+
+            //Now that we have our film, let's grab the other info from the api
+
+            //initialize the clips array
+            videos = new ArrayList<>();
+
+            //initialize the reviews array too
+            reviews = new ArrayList<>();
+
+            if (thisFilm != null) {
+                getMovieDetails();
+            } else {
+                Log.i("Details:onCreate", "Film intent was null! Oh no!");
             }
         }
     }
@@ -357,110 +416,71 @@ public class DetailActivityFragment extends Fragment {
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
 
-        ArrayList<Review> dummyReviews = new ArrayList<>();
+        final View rootView = inflater.inflate(R.layout.fragment_detail, container, false);
 
-        //Fill with dummydata
-        for (int i = 0; i < 5; i++) {
-            Review fake = new Review();
-            fake.content = "Good action movie with a decent script for the genre. The photography is really good too but, in the end, it is quite repeating itself from beginning to end and the stormy OST is exhausting.";
-            fake.author = "tanty";
-            dummyReviews.add(fake);
-        }
+        topView = (LinearLayout) rootView.findViewById(R.id.detail_layout_top);
 
-        View rootView = inflater.inflate(R.layout.fragment_detail, container, false);
+        posterView = (ImageView) rootView.findViewById(R.id.film_detail_poster);
+        titleTextView = (TextView) rootView.findViewById(R.id.film_title);
+        synopsisTextView = (TextView) rootView.findViewById(R.id.film_synopsis);
+        releaseView = (TextView) rootView.findViewById(R.id.film_release);
+        ratingView = (TextView) rootView.findViewById(R.id.film_rating);
+        favBtnView = (CheckBox) rootView.findViewById(R.id.detail_button_fav);
+        reviewSectionTop = (LinearLayout) rootView.findViewById(R.id.review_layout_top);
+        trailersHolderView = (LinearLayout) rootView.findViewById(R.id.detail_trailers_container);
 
-        top = (LinearLayout) rootView.findViewById(R.id.detail_layout_top);
 
-        ImageView posterView = (ImageView) rootView.findViewById(R.id.film_detail_poster);
-        TextView titleTextView = (TextView) rootView.findViewById(R.id.film_title);
-        TextView synopsisTextView = (TextView) rootView.findViewById(R.id.film_synopsis);
-        TextView releaseView = (TextView) rootView.findViewById(R.id.film_release);
-        TextView ratingView = (TextView) rootView.findViewById(R.id.film_rating);
-        CheckBox favBtnView = (CheckBox) rootView.findViewById(R.id.detail_button_fav);
-        //videoList = (LinearLayout) rootView.findViewById(R.id.detail_trailers_list);
-        ListView videoListView = (ListView) rootView.findViewById(R.id.detail_trailers_listview);
-        //ListView reviewsListView = (ListView) rootView.findViewById(R.id.detail_reviews_listview);
+        if (thisFilm != null) {
+            //Set the status of the CheckBox to whatever the favorites member is
+            favBtnView.setChecked(thisFilm.favorite);
 
-        //Set the status of the CheckBox to whatever the favorites member is
-        favBtnView.setChecked(thisFilm.favorite);
 
-        //Set up a listener for the CheckBox item
-        favBtnView.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
-            @Override
-            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-                SharedPreferences settings = PreferenceManager.getDefaultSharedPreferences(getActivity());
-                SharedPreferences.Editor editor = settings.edit();
-                HashSet<String> favs = (HashSet) settings.getStringSet(getString(R.string.pref_fav_key),new HashSet<String>());
+            //Set up a listener for the CheckBox item
+            favBtnView.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+                @Override
+                public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+                    SharedPreferences settings = PreferenceManager.getDefaultSharedPreferences(getActivity());
+                    SharedPreferences.Editor editor = settings.edit();
+                    HashSet<String> favs = (HashSet) settings.getStringSet(getString(R.string.pref_fav_key), new HashSet<String>());
 
-                if (isChecked){
-                    //We want to set this movie as a favorite
-                    Log.i("favBtnChecked", "Storing this movie in our favorites Set");
-                    favs.add(thisFilm.id);
+                    if (isChecked) {
+                        //We want to set this movie as a favorite
+                        thisFilm.favorite = true;
+                        favs.add(thisFilm.id);
+                        Toast toast = new Toast(buttonView.getContext());
+                        toast.setText("Added to Favorites");
 
-                }
-                else {
-                    //We want to remove this movie from our favorites
-                    Log.i("favBtnUnchecked", "Removing this movie from our favorites Set");
-                    favs.remove(thisFilm.id);
+                    } else {
+                        //We want to remove this movie from our favorites
+                        favs.remove(thisFilm.id);
+                        thisFilm.favorite = false;
 
+                    }
+
+                    editor.putStringSet(getString(R.string.pref_fav_key), favs).commit();
                 }
 
-                editor.putStringSet(getString(R.string.pref_fav_key),favs).commit();
+            });
+
+
+            titleTextView.setText(thisFilm.title);
+            synopsisTextView.setText(thisFilm.synopsis);
+            releaseView.setText(thisFilm.release_date);
+            ratingView.setText(thisFilm.vote_avg.toString() + "/10");
+
+            //Load up the Poster
+            Picasso.with(rootView.getContext()).load(thisFilm.poster_path).into(posterView);
+
+            //See if we can set up Trailer and Review content from retrieved Bundle data
+            if (!videos.isEmpty()) {
+                setVideoContent(rootView.getContext());
             }
 
-        });
-
-
-        trailerAdapter = new ClipAdapter(rootView.getContext(),R.layout.fragment_detail,videos);
-
-        videoListView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
-            @Override
-            public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-                sendToYoutube(view.getContext(), trailerAdapter.getItem(position));
-            }
-        });
-
-        //Bind the adapter to the ListView
-        videoListView.setAdapter(trailerAdapter);
-
-        titleTextView.setText(thisFilm.title);
-        synopsisTextView.setText(thisFilm.synopsis);
-        releaseView.setText(thisFilm.release_date);
-        ratingView.setText(thisFilm.vote_avg.toString());
-
-        //Load up the Poster
-        Picasso.with(rootView.getContext()).load(thisFilm.poster_path).into(posterView);
-
-
-
-        //Inflate the review section XML
-
-        View reviewSection = inflater.inflate(R.layout.detail_review_item,container, false);
-
-        reviewSectionTop = (LinearLayout) reviewSection.findViewById(R.id.review_layout_top);
-
-        Log.i("Detail:onCreateView", "Dummy Review Count: " + reviews.size());
-
-        if(!reviews.isEmpty()) {
-            TextView rvw_contentTemplate = (TextView) reviewSection.findViewById(R.id.detail_review_content);
-            TextView rvw_authorTemplate = (TextView) reviewSection.findViewById(R.id.detail_review_author);
-
-            //Retreive the content from reviews arraylist
-            for (Review r : reviews){
-                TextView rvw_content = new TextView(rootView.getContext());
-                TextView rvw_author = new TextView(rootView.getContext());
-                rvw_content.setText(r.content);
-                rvw_author.setText("-" + r.author);
-                reviewSectionTop.addView(rvw_content);
-                reviewSectionTop.addView(rvw_author);
+            if (!reviews.isEmpty()) {
+                setReviewContent(rootView.getContext());
             }
 
-            top.addView(reviewSectionTop);
         }
-
-
-
-        Log.i("Detail:onCreateView", "Finished building the detail layout.");
 
         return rootView;
     }
@@ -498,57 +518,5 @@ public class DetailActivityFragment extends Fragment {
 
         //Save the reviews List
         outState.putParcelableArrayList(getString(R.string.detail_fetched_reviews), reviews);
-    }
-
-    private class ClipAdapter extends ArrayAdapter<Clip> {
-        private Context context;
-        private int layoutId;
-        private ArrayList<Clip> clips;
-
-        public ClipAdapter(Context context, int resource, List<Clip> objects) {
-            super(context, resource, objects);
-            this.context = context;
-            this.layoutId = resource;
-            this.clips = new ArrayList(objects);
-        }
-
-        @Override
-        public View getView(int position, View convertView, ViewGroup parent) {
-            ImageView imageView;
-            String trailer_template_url = "http://img.youtube.com/vi/%s/mqdefault.jpg";
-
-            if (convertView == null) {
-                // if it's not recycled, initialize some attributes
-                imageView = new ImageView(context);
-                imageView.setLayoutParams(new ListView.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
-                imageView.setScaleType(ImageView.ScaleType.CENTER);
-            } else {
-                imageView = (ImageView) convertView;
-            }
-
-            Clip thisClip = getItem(position);
-            String trailer_url = String.format(trailer_template_url, thisClip.key);
-
-            Log.i("ClipAdapter:getView", "Set trailer url: " + trailer_url);
-
-            // Use Picasso to load the image into this imageView
-            Picasso.with(context)
-                    .load(trailer_url)
-                    .placeholder(R.drawable.sample_0)
-                    .error(R.drawable.sample_3)
-                    .into(imageView);
-            return imageView;
-        }
-    }
-
-    private class ReviewAdapter extends ArrayAdapter<Review> {
-        public ReviewAdapter(Context context, int resource, List<Review> objects) {
-            super(context, resource, objects);
-        }
-
-        @Override
-        public View getView(int position, View convertView, ViewGroup parent) {
-            return super.getView(position, convertView, parent);
-        }
     }
 }

@@ -52,9 +52,14 @@ public class FilmFragment extends Fragment {
     private FilmAdapter filmAdapter;
 
     private final String MOVIE_LIST_KEY = "POPULAR";
+    private final String FAVS_LIST_KEY = "FAVORITES";
 
     public FilmFragment() {
 
+    }
+
+    public interface Callback {
+        public void onItemSelected(Film detailFilm);
     }
 
     public class voteCompare implements Comparator<Film> {
@@ -74,7 +79,8 @@ public class FilmFragment extends Fragment {
     private void updateMovies() {
 
         //Need to check for Internet Connectivity before attempting execute the update
-        ConnectivityManager cm = (ConnectivityManager) getActivity().getSystemService(Context.CONNECTIVITY_SERVICE);
+        ConnectivityManager cm = (ConnectivityManager) getActivity().
+                                                       getSystemService(Context.CONNECTIVITY_SERVICE);
         NetworkInfo myNet = cm.getActiveNetworkInfo();
         if (myNet == null || !myNet.isConnected()) {
             Toast.makeText(this.getActivity(),
@@ -96,26 +102,54 @@ public class FilmFragment extends Fragment {
     @Override
     public void onStart() {
         super.onStart();
-        if (myFlix != null) {
+        if (filmAdapter != null) {
             //Let's check SharedPreferences to see if we need to sort the collection
             SharedPreferences settings = PreferenceManager.getDefaultSharedPreferences(getActivity());
             String sortPref = settings.getString(getString(R.string.pref_sort_order_key),
                     getString(R.string.pref_sort_order_default));
 
             if (sortPref.equals(getString(R.string.pref_sort_order_rating))) {
+                //We need all the movies
+                filmAdapter.clear();
+                filmAdapter.addAll(myFlix);
+
                 //Sort the arrayList by vote_average
-                Collections.sort(myFlix, Collections.reverseOrder(new voteCompare()));
+                filmAdapter.sort(Collections.reverseOrder(new voteCompare()));
+                //Collections.sort(myFlix, Collections.reverseOrder(new voteCompare()));
+                //If the previous rating was favs, we need to change the backing array for the grid
             }
             else if (sortPref.equals(getString(R.string.pref_sort_order_popular))){
+                //We need all the movies
+                filmAdapter.clear();
+                filmAdapter.addAll(myFlix);
+
                 //Sort the arrayList by popularity
-                Collections.sort(myFlix, Collections.reverseOrder(new popCompare()));
+                filmAdapter.sort(Collections.reverseOrder(new popCompare()));
+                //Collections.sort(myFlix, Collections.reverseOrder(new popCompare()));
+                //If the previous rating was favs, we need to change the backing array for the grid
             }
             else if (sortPref.equals(getString(R.string.pref_sort_order_fav))) {
                 //Filter the collection by favorite
+                //Allocate a new ArrayList<Film> and
+                ArrayList<Film> favFilms = new ArrayList<>();
+                // fill it with only the films from SharedPrefs
+                HashSet<String> favs = (HashSet) settings.getStringSet(getString(R.string.pref_fav_key),new HashSet<String>());
+                if (!favs.isEmpty()) {
+                    for (Film f : myFlix) {
+                        if (favs.contains(f.id)) {
+                            favFilms.add(f);
+                        }
+                    }
+
+                    filmAdapter.clear();
+                    filmAdapter.addAll(favFilms);
+                }
             }
+
+            //filmAdapter.notifyDataSetChanged();
         }
 
-        filmAdapter.notifyDataSetChanged();
+
     }
 
     @Override
@@ -133,6 +167,10 @@ public class FilmFragment extends Fragment {
             ArrayList<Film> savedMovies = savedInstanceState.getParcelableArrayList(MOVIE_LIST_KEY);
             if (savedMovies != null) {
                 myFlix = savedMovies;
+                if (filmAdapter != null) {
+                    filmAdapter.clear();
+                    filmAdapter.addAll(savedMovies);
+                }
             }
             else {
                 //Somehow we didn't save anything.
@@ -154,10 +192,10 @@ public class FilmFragment extends Fragment {
     @Override
     public void onSaveInstanceState(Bundle outState) {
         super.onSaveInstanceState(outState);
-        //Save what's in the adapter, if anything
-        ArrayList<Film> theMovies = filmAdapter.films;
-        if (!theMovies.isEmpty()) {
-            outState.putParcelableArrayList(MOVIE_LIST_KEY,theMovies);
+
+        //Save the list of movies in the grid
+        if (myFlix != null) {
+            outState.putParcelableArrayList(MOVIE_LIST_KEY,myFlix);
         }
     }
 
@@ -180,12 +218,14 @@ public class FilmFragment extends Fragment {
 
         GridView theGrid = (GridView) rootView.findViewById(R.id.gridview_fragment);
 
-        filmAdapter = new FilmAdapter(rootView.getContext(),R.id.grid_element, myFlix);
+        filmAdapter = new FilmAdapter(rootView.getContext(),R.id.grid_element, new ArrayList<Film>());
 
         theGrid.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
             public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-                sendToDetail(view.getContext(), filmAdapter.getItem(position));
+
+                //sendToDetail(view.getContext(), filmAdapter.getItem(position));
+                ((Callback)getActivity()).onItemSelected(filmAdapter.getItem(position));
             }
         });
 
@@ -214,13 +254,19 @@ public class FilmFragment extends Fragment {
             this.films = data;
         }
 
+        public void setFilms(ArrayList<Film> filmsToUse) {
+            films = filmsToUse;
+            notifyDataSetChanged();
+        }
+
         @Override
         public View getView(int position, View convertView, ViewGroup parent) {
             ImageView imageView;
             if (convertView == null) {
                 // if it's not recycled, initialize some attributes
                 imageView = new ImageView(context);
-                imageView.setLayoutParams(new GridView.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+                imageView.setLayoutParams(new GridView.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
+                                                                    ViewGroup.LayoutParams.MATCH_PARENT));
                 imageView.setScaleType(ImageView.ScaleType.CENTER_CROP);
             } else {
                 imageView = (ImageView) convertView;
@@ -379,6 +425,7 @@ public class FilmFragment extends Fragment {
 
                 filmAdapter.clear();
                 filmAdapter.addAll(films);
+                myFlix = films;
             }
         }
 

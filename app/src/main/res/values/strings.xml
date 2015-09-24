@@ -29,6 +29,7 @@
     <string name="pref_sort_order_key">Order</string>
     <string name="pref_sort_order_label_popular">Most Popular</string>
     <string name="pref_sort_order_label_rating">User Rating</string>
+    <string name="pref_sort_order_label_fav">Favorites</string>
     <string name="pref_sort_order_default">popular</string>
     <string name="pref_sort_order_popular">popular</string>
     <string name="pref_sort_order_rating">rating</string>

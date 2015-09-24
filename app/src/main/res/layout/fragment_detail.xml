@@ -5,7 +5,9 @@
 
     <LinearLayout android:layout_width="match_parent"
         android:id="@+id/detail_layout_top"
-        android:layout_height="match_parent" android:paddingLeft="@dimen/activity_horizontal_margin"
+        android:layout_height="match_parent"
+        android:background="@color/background_material_light"
+        android:paddingLeft="@dimen/activity_horizontal_margin"
         android:paddingRight="@dimen/activity_horizontal_margin"
         android:paddingTop="@dimen/activity_vertical_margin"
         android:paddingBottom="@dimen/activity_vertical_margin"
@@ -17,9 +19,11 @@
             android:layout_width="match_parent"
             android:layout_height="120dp"
             android:gravity="center|center_horizontal"
-            android:background="@color/material_deep_teal_200"
+            android:background="#198764"
+            android:textColor="@color/primary_material_light"
             android:textSize="@dimen/abc_text_size_headline_material"
-            android:textStyle="bold" />
+            android:textStyle="bold"
+            android:autoText="true" />
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -41,14 +45,14 @@
 
                 <TextView
                     android:id="@+id/film_release"
-                    android:text="2015-08-25"
+                    android:text=""
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:gravity="center"/>
 
                 <TextView
                     android:id="@+id/film_rating"
-                    android:text="7.7"
+                    android:text=""
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:gravity="center"/>
@@ -70,27 +74,50 @@
 
         <TextView
             android:id="@+id/film_synopsis"
+            android:padding="@dimen/abc_edit_text_inset_horizontal_material"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content" />
 
         <TextView
             android:id="@+id/trailer_section_title"
             android:gravity="center"
+            android:padding="@dimen/abc_edit_text_inset_horizontal_material"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="@string/detail_trailer_section_heading" />
+            android:text="@string/detail_trailer_section_heading"
+            android:textSize="@dimen/abc_text_size_large_material"/>
 
-        <ListView
-            android:id="@+id/detail_trailers_listview"
-            android:layout_gravity="center"
-            android:layout_width="match_parent"
-            android:layout_height="240dp"></ListView>
 
-        <LinearLayout
-            android:orientation="vertical"
-            android:id="@+id/detail_trailers_list"
+        <HorizontalScrollView
             android:layout_width="wrap_content"
-            android:layout_height="wrap_content"></LinearLayout>
+            android:layout_height="wrap_content"
+            android:padding="@dimen/abc_switch_padding">
+            <LinearLayout
+                android:id="@+id/detail_trailers_container"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal">
+
+            </LinearLayout>
+        </HorizontalScrollView>
+
+
+        <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+            android:id="@+id/review_layout_top"
+            android:orientation="vertical"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent">
+
+            <TextView
+                android:id="@+id/detail_review_section_title"
+                android:gravity="center"
+                android:padding="@dimen/abc_control_padding_material"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/detail_reviews_section_heading"
+                android:textSize="@dimen/abc_text_size_large_material"/>
+
+        </LinearLayout>
 
 
     </LinearLayout>
