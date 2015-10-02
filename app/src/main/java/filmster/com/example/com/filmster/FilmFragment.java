@@ -38,7 +38,6 @@ import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.HashSet;
 
 /**
@@ -63,21 +62,7 @@ public class FilmFragment extends Fragment {
     }
 
     public interface Callback {
-        public void onItemSelected(Film detailFilm);
-    }
-
-    public class voteCompare implements Comparator<Film> {
-        @Override
-        public int compare(Film lhs, Film rhs) {
-            return lhs.vote_avg.compareTo(rhs.vote_avg);
-        }
-    }
-
-    public class popCompare implements Comparator<Film> {
-        @Override
-        public int compare(Film lhs, Film rhs) {
-            return lhs.popularity.compareTo(rhs.popularity);
-        }
+        void onItemSelected(Film detailFilm);
     }
 
     private void updateMovies(String sortOrder) {
@@ -174,7 +159,6 @@ public class FilmFragment extends Fragment {
 
                     try {
                         url = new URL(favBuilder.build().toString());
-                        Log.i(LOG_TAG, "Favorites URL: " + url.toString());
                     } catch (MalformedURLException e) {
                         Log.e(LOG_TAG, "URL Creation ERROR", e);
                     }
