@@ -447,8 +447,10 @@ public class DetailActivityFragment extends Fragment {
                         //We want to set this movie as a favorite
                         thisFilm.favorite = true;
                         favs.add(thisFilm.id);
-                        Toast toast = new Toast(buttonView.getContext());
-                        toast.setText("Added to Favorites");
+                        Toast toast = new Toast(buttonView.getContext()).
+                                           makeText(buttonView.getContext(),
+                                           "Added to Favorites",Toast.LENGTH_SHORT);
+                        toast.show();
 
                     } else {
                         //We want to remove this movie from our favorites

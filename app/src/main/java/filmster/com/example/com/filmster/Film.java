@@ -22,6 +22,17 @@ public class Film implements Parcelable {
         favorite = false;
     }
 
+    @Override
+    public boolean equals(Object o) {
+        if (o == null) {
+            return false;
+        }
+        else {
+            Film film = (Film) o;
+            return this.id.equals(film.id);
+        }
+    }
+
     //Parcelable Constructor
     private Film(Parcel in) {
         //Hey, my stuff is back. Awesome
